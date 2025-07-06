@@ -1,0 +1,9 @@
+xarray>=2025.1.2  
+zarr>=3.0.4
+fastapi>=0.104.1
+uvicorn>=0.24.0
+numpy>=1.24.3
+pillow>=10.1.0
+pandas>=2.1.4
+fsspec>=2023.12.2
+gcsfs>=2023.12.2 

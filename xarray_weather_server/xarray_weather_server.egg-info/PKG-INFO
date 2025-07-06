@@ -1,0 +1,359 @@
+Metadata-Version: 2.4
+Name: xarray_weather_server
+Version: 1.0.0
+Summary: FastAPI server for fetching ERA5 wind data as WeatherLayers-compatible PNGs
+Home-page: https://github.com/yourusername/xarray_weather_server
+Author: Your Name
+Author-email: Your Name <your.email@example.com>
+Project-URL: Homepage, https://github.com/yourusername/xarray_weather_server
+Project-URL: Repository, https://github.com/yourusername/xarray_weather_server
+Project-URL: Documentation, https://github.com/yourusername/xarray_weather_server#readme
+Project-URL: Issues, https://github.com/yourusername/xarray_weather_server/issues
+Classifier: Development Status :: 4 - Beta
+Classifier: Intended Audience :: Developers
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: OS Independent
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Topic :: Scientific/Engineering :: Atmospheric Science
+Classifier: Topic :: Internet :: WWW/HTTP :: HTTP Servers
+Requires-Python: >=3.8
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: fastapi>=0.104.1
+Requires-Dist: uvicorn>=0.24.0
+Requires-Dist: xarray>=2023.12.0
+Requires-Dist: numpy>=1.24.3
+Requires-Dist: pillow>=10.1.0
+Requires-Dist: pandas>=2.1.4
+Requires-Dist: zarr>=2.16.1
+Requires-Dist: fsspec>=2023.12.2
+Requires-Dist: gcsfs>=2023.12.2
+Provides-Extra: dev
+Requires-Dist: requests>=2.31.0; extra == "dev"
+Requires-Dist: pytest>=7.4.0; extra == "dev"
+Requires-Dist: black>=23.0.0; extra == "dev"
+Requires-Dist: flake8>=6.0.0; extra == "dev"
+Dynamic: author
+Dynamic: home-page
+Dynamic: license-file
+Dynamic: requires-python
+
+# Weather Data API
+
+FastAPI server that fetches historical (ERA5) and forecast (GFS/GEFS) wind data and returns it as WeatherLayers-compatible PNG files.
+
+## Features
+
+- **Historical Data (ERA5)**: Access historical wind data from 1979 to present (5-day delay)
+- **Forecast Data (GFS)**: Global Forecast System data with 0-384 hour lead times
+- **Ensemble Forecasts (GEFS)**: Global Ensemble Forecast System with 21 ensemble members and 0-35 day lead times
+- **Real-time**: Latest available data from all sources
+- **Global Coverage**: Worldwide wind data at high resolution
+- **Regional Queries**: Specify custom lat/lon bounds
+- **WeatherLayers Compatible**: PNG format ready for deck.gl visualization
+- **Caching**: Intelligent caching for improved performance
+
+## Data Sources
+
+| Dataset | Description | Resolution | Coverage | Source |
+|---------|-------------|------------|-----------|--------|
+| **ERA5** | Historical reanalysis | 0.25° | 1979-present | Google Cloud Public Datasets |
+| **GFS** | Deterministic forecast | ~13km | 0-384 hours | dynamical.org |
+| **GEFS** | Ensemble forecast (21 members) | ~25km | 0-35 days | dynamical.org |
+
+## Quick Start
+
+### 1. Install Dependencies
+
+```bash
+# Install API dependencies
+pip install -r requirements_api.txt
+```
+
+### 2. Start the Server
+
+```bash
+# Using the startup script
+./start_wind_api.sh
+
+# Or manually
+uvicorn xarray_weather_server.server:app --reload --host 0.0.0.0 --port 8000
+```
+
+### 3. Access the API
+
+- **API Documentation**: http://localhost:8000/docs
+- **Interactive API**: http://localhost:8000/docs
+- **Health Check**: http://localhost:8000/health
+- **Root Info**: http://localhost:8000/
+
+## API Endpoints
+
+### Historical Data (ERA5)
+
+#### GET /wind/{date_hour}
+
+Fetch historical wind data for a specific date and time.
+
+**Parameters:**
+- `date_hour` (path): Date in YYMMDDHH format (e.g., "24011512" for Jan 15, 2024 12:00 UTC)
+- `lat_min` (query, optional): Minimum latitude (-90 to 90, default: -90)
+- `lat_max` (query, optional): Maximum latitude (-90 to 90, default: 90)
+- `lon_min` (query, optional): Minimum longitude (-180 to 180, default: -180)
+- `lon_max` (query, optional): Maximum longitude (-180 to 180, default: 180)
+
+**Examples:**
+```bash
+# Global wind data for Jan 15, 2024 12:00 UTC
+curl http://localhost:8000/wind/24011512 -o wind_24011512.png
+
+# Mediterranean region wind data
+curl "http://localhost:8000/wind/24011512?lat_min=30&lat_max=45&lon_min=-10&lon_max=40" -o wind_med.png
+```
+
+#### GET /wind/range
+
+Batch fetch historical wind data for a date range.
+
+**Parameters:**
+- `start_date` (query): Start date in YYMMDDHH format
+- `end_date` (query): End date in YYMMDDHH format
+- `step_hours` (query, optional): Hours between timesteps (default: 1)
+- Region bounds (optional): `lat_min`, `lat_max`, `lon_min`, `lon_max`
+
+**Example:**
+```bash
+# 24 hours of wind data
+curl "http://localhost:8000/wind/range?start_date=24011500&end_date=24011523" -o wind_range.zip
+```
+
+#### GET /wind/latest
+
+Fetch the latest available historical wind data.
+
+```bash
+curl http://localhost:8000/wind/latest -o wind_latest.png
+```
+
+### Forecast Data (GFS/GEFS)
+
+#### GET /forecast/{dataset_type}/latest
+
+Get the latest available initialization time for forecast datasets.
+
+**Parameters:**
+- `dataset_type` (path): 'gfs' or 'gefs'
+
+**Examples:**
+```bash
+# Get latest GFS initialization time
+curl http://localhost:8000/forecast/gfs/latest
+
+# Get latest GEFS initialization time
+curl http://localhost:8000/forecast/gefs/latest
+```
+
+#### GET /forecast/{dataset_type}/{init_time}/{lead_time}
+
+Fetch forecast wind data for a specific initialization time and lead time.
+
+**Parameters:**
+- `dataset_type` (path): 'gfs' or 'gefs'
+- `init_time` (path): Initialization time in ISO format (e.g., '2024-01-15T00:00:00')
+- `lead_time` (path): Lead time (e.g., '24h', '7d')
+- `ensemble_member` (query, optional): For GEFS, ensemble member 0-20 (None for ensemble mean)
+- Region bounds (optional): `lat_min`, `lat_max`, `lon_min`, `lon_max`
+
+**Examples:**
+```bash
+# GFS forecast 24 hours ahead
+curl http://localhost:8000/forecast/gfs/2024-01-15T00:00:00/24h -o gfs_24h.png
+
+# GEFS ensemble mean, 7 days ahead
+curl http://localhost:8000/forecast/gefs/2024-01-15T00:00:00/7d -o gefs_7d_mean.png
+
+# GEFS ensemble member 5, 3 days ahead
+curl "http://localhost:8000/forecast/gefs/2024-01-15T00:00:00/3d?ensemble_member=5" -o gefs_3d_ens5.png
+```
+
+#### GET /forecast/{dataset_type}/range
+
+Batch fetch forecast wind data for a range of lead times.
+
+**Parameters:**
+- `dataset_type` (path): 'gfs' or 'gefs'
+- `init_time` (query): Initialization time in ISO format
+- `start_lead_hours` (query): Start lead time in hours (default: 0)
+- `end_lead_hours` (query): End lead time in hours (default: 72)
+- `step_hours` (query): Hours between lead times (default: 6)
+- `ensemble_member` (query, optional): For GEFS, ensemble member 0-20
+- Region bounds (optional): `lat_min`, `lat_max`, `lon_min`, `lon_max`
+
+**Examples:**
+```bash
+# GFS forecast range: 0-72 hours, every 6 hours
+curl "http://localhost:8000/forecast/gfs/range?init_time=2024-01-15T00:00:00&start_lead_hours=0&end_lead_hours=72&step_hours=6" -o gfs_range.zip
+
+# GEFS ensemble member 0: 0-240 hours, every 12 hours
+curl "http://localhost:8000/forecast/gefs/range?init_time=2024-01-15T00:00:00&start_lead_hours=0&end_lead_hours=240&step_hours=12&ensemble_member=0" -o gefs_range_ens0.zip
+```
+
+### System Endpoints
+
+#### GET /health
+
+Health check endpoint with status of all datasets.
+
+```bash
+curl http://localhost:8000/health
+```
+
+#### DELETE /cache/clear
+
+Clear all cached data (development only).
+
+```bash
+curl -X DELETE http://localhost:8000/cache/clear
+```
+
+## Date and Time Formats
+
+### Historical Data (ERA5)
+Uses YYMMDDHH format:
+- **YY**: 2-digit year (50-99 = 1950-1999, 00-49 = 2000-2049)
+- **MM**: 2-digit month (01-12)
+- **DD**: 2-digit day (01-31)
+- **HH**: 2-digit hour (00-23)
+
+### Forecast Data (GFS/GEFS)
+- **Init Time**: ISO format (e.g., '2024-01-15T00:00:00')
+- **Lead Time**: String format (e.g., '24h', '7d', '120h')
+
+## Ensemble Members (GEFS only)
+
+GEFS provides 21 ensemble members (0-20) plus ensemble statistics:
+- **Individual Members**: Use `ensemble_member=0` to `ensemble_member=20`
+- **Ensemble Mean**: Use `ensemble_member=None` (default)
+- **Ensemble Statistics**: Can be computed client-side from multiple member requests
+
+## Data Format
+
+The returned PNG files are compatible with WeatherLayers and contain:
+- **Red Channel**: U component (east-west wind) + 128 offset
+- **Green Channel**: V component (north-south wind) + 128 offset
+- **Blue Channel**: Wind speed (scaled for visualization)
+- **Alpha Channel**: Full opacity (255)
+
+Wind values are in m/s, encoded as: `pixel_value = wind_value + 128`
+
+## Usage with WeatherLayers
+
+### Historical Data
+```javascript
+// Load historical wind data
+const windTexture = await WeatherLayers.loadTextureData('http://localhost:8000/wind/24011512');
+
+// Create raster layer
+const rasterLayer = new WeatherLayers.RasterLayer({
+  id: 'wind-raster',
+  textureData: windTexture,
+  imageType: WeatherLayers.ImageType.VECTOR,
+  imageUnscale: [-128, 127],
+  // ... other layer props
+});
+```
+
+### Forecast Data
+```javascript
+// Load GFS forecast data
+const gfsTexture = await WeatherLayers.loadTextureData('http://localhost:8000/forecast/gfs/2024-01-15T00:00:00/24h');
+
+// Load GEFS ensemble mean
+const gefsTexture = await WeatherLayers.loadTextureData('http://localhost:8000/forecast/gefs/2024-01-15T00:00:00/7d');
+
+// Load specific GEFS ensemble member
+const gefsEnsTexture = await WeatherLayers.loadTextureData('http://localhost:8000/forecast/gefs/2024-01-15T00:00:00/7d?ensemble_member=5');
+
+// Create forecast layers the same way as historical
+const forecastLayer = new WeatherLayers.ParticleLayer({
+  id: 'forecast-particles',
+  textureData: gfsTexture,
+  imageType: WeatherLayers.ImageType.VECTOR,
+  imageUnscale: [-128, 127],
+  numParticles: 2000,
+  // ... other layer props
+});
+```
+
+## Testing
+
+### Basic Functionality Test
+```bash
+python test_forecast.py
+```
+
+### Manual API Testing
+```bash
+# Test historical data
+curl http://localhost:8000/wind/24011512 -o test_historical.png
+
+# Test GFS forecast
+curl http://localhost:8000/forecast/gfs/2024-01-15T00:00:00/24h -o test_gfs.png
+
+# Test GEFS ensemble
+curl "http://localhost:8000/forecast/gefs/2024-01-15T00:00:00/7d?ensemble_member=0" -o test_gefs.png
+```
+
+## Performance & Caching
+
+- **Dataset Loading**: First request to each dataset takes longer (30-60s)
+- **Caching**: ZIP files are cached based on request parameters
+- **Regional Queries**: Smaller regions are processed faster
+- **Parallel Processing**: PNG creation uses multiple CPU cores
+- **Memory Usage**: ~2-4GB for loaded datasets
+
+## Lead Time Ranges
+
+| Dataset | Maximum Lead Time | Resolution | Update Frequency |
+|---------|-------------------|------------|------------------|
+| GFS | 384 hours (16 days) | 6-hour steps | 4x daily |
+| GEFS | 35 days | Variable | 2x daily |
+
+## Error Handling
+
+The API provides descriptive error messages:
+- **400**: Bad request (invalid parameters)
+- **404**: Data not found (invalid date/time)
+- **500**: Server error (dataset loading issues)
+
+## Troubleshooting
+
+### "Failed to load dataset"
+- Check internet connection
+- Verify access to dynamical.org (for GFS/GEFS) or Google Cloud (for ERA5)
+- Try restarting the server
+
+### "Data not available for date/time"
+- Check date/time format
+- Ensure date is within available range
+- For forecasts, check if initialization time exists
+
+### Large response times
+- First dataset load takes longer
+- Global queries take longer than regional ones
+- Use caching for repeated requests
+
+## Requirements
+
+- Python 3.8+
+- Internet connection for data access
+- ~4GB RAM for all datasets loaded
+- Storage for cache files
+
+## License
+
+This project is licensed under the terms specified in the LICENSE file. 

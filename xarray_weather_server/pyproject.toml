@@ -1,0 +1,71 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "xarray_weather_server"
+version = "1.0.0"
+authors = [
+    {name = "Your Name", email = "your.email@example.com"},
+]
+description = "FastAPI server for fetching ERA5 wind data as WeatherLayers-compatible PNGs"
+readme = "README.md"
+requires-python = ">=3.8"
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Topic :: Scientific/Engineering :: Atmospheric Science",
+    "Topic :: Internet :: WWW/HTTP :: HTTP Servers",
+]
+dependencies = [
+    "fastapi>=0.104.1",
+    "uvicorn>=0.24.0",
+    "xarray>=2023.12.0",
+    "numpy>=1.24.3",
+    "pillow>=10.1.0",
+    "pandas>=2.1.4",
+    "zarr>=2.16.1",
+    "fsspec>=2023.12.2",
+    "gcsfs>=2023.12.2",
+]
+
+[project.optional-dependencies]
+dev = [
+    "requests>=2.31.0",
+    "pytest>=7.4.0",
+    "black>=23.0.0",
+    "flake8>=6.0.0",
+]
+
+[project.scripts]
+xarray-weather-server = "xarray_weather_server.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/yourusername/xarray_weather_server"
+Repository = "https://github.com/yourusername/xarray_weather_server"
+Documentation = "https://github.com/yourusername/xarray_weather_server#readme"
+Issues = "https://github.com/yourusername/xarray_weather_server/issues"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["xarray_weather_server*"]
+
+[tool.setuptools.package-data]
+xarray_weather_server = ["*.md", "*.txt"]
+
+[tool.black]
+line-length = 88
+target-version = ['py38']
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"] 

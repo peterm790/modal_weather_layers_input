@@ -1,0 +1,2 @@
+[console_scripts]
+xarray-weather-server = xarray_weather_server.cli:main

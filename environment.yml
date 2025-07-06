@@ -1,0 +1,12 @@
+name: era5-modal
+channels:
+  - conda-forge
+dependencies:
+  - python=3.11
+  - xarray
+  - numpy
+  - pillow
+  - pandas
+  - pip
+  - pip:
+    - modal 

@@ -1,0 +1,7 @@
+include README.md
+include LICENSE
+include requirements.txt
+recursive-include xarray_weather_server *.py
+recursive-include tests *.py
+global-exclude *.pyc
+global-exclude __pycache__ 

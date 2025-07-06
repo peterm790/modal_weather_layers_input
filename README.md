@@ -26,7 +26,7 @@ modal deploy modal_ERA5_to_png_server.py
 
 ### cURL Example
 ```bash
-curl "https://your-modal-url.com/api_get_wind_png?date_hour=2024011512" \
+curl "https://peterm790--era5-wind-png-api-get-wind-png.modal.run?date_hour=2024011512" \
   -o wind.png
 ```
 
@@ -34,7 +34,7 @@ curl "https://your-modal-url.com/api_get_wind_png?date_hour=2024011512" \
 ```javascript
 const fetchWindPNG = async (dateHour) => {
   const response = await fetch(
-    `https://your-modal-url.com/api_get_wind_png?date_hour=${dateHour}`
+    `https://peterm790--era5-wind-png-api-get-wind-png.modal.run?date_hour=${dateHour}`
   );
   
   if (response.ok) {
@@ -48,6 +48,12 @@ const fetchWindPNG = async (dateHour) => {
 // Usage
 const windImageUrl = await fetchWindPNG('2024011512');
 ```
+
+## Live API
+
+**Deployed Endpoint:** https://peterm790--era5-wind-png-api-get-wind-png.modal.run  
+**API Docs:** https://peterm790--era5-wind-png-api-get-wind-png.modal.run/docs  
+**Dashboard:** https://modal.com/apps/peterm790/main/deployed/era5-wind-png
 
 ## Date Format
 
